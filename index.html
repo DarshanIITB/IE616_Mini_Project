@@ -1,0 +1,264 @@
+<html>
+<head>
+<title>Matrix Game solver</title>
+
+<SCRIPT LANGUAGE="JavaScript">
+
+var A=[],str=[],x=[],y=[],mat=[];
+var m,m1,n,n1,n2,message,val,vsave;
+
+function main(form) {
+	getinput(form);
+	InitializeA();
+	makeValuePositive();
+	Solve_LP();
+	ValueOptStr();
+	display(form);
+	form.output.value=message; 
+}
+
+function InitializeA() {
+	var i,j,k;
+	m1=m+1;
+	for (i=0;i<=m1;i++) {
+		A[i]=[];
+		A[i][0]=i;     /* 1st column */
+	}
+	for (i=1;i<m1;i++) {
+		k=1;
+		j=1;
+		while (j<=mat[i-1].length) {
+			if (mat[i-1][j-1]!="") {
+				A[i][k] = mat[i-1][j-1];
+				k++;
+			}
+			j++;
+		}
+	}
+	n1=A[1].length;
+	n=n1-1;
+	n2=n1+1;
+	for (i=1;i<m1;i++) {			/* Last column */
+		A[i][n1]=1.+Math.random()*.0000001;		/*selecting randomly to avoid cycling */
+	}
+	for (j=1;j<n1;j++) {
+		A[0][j]=-j;        /* 1st row */
+		A[m1][j] = -1;     /* Last row */
+	}
+	A[m1][n1]=0;          /* Bottom Right corner */
+	message = "The matrix is\r";
+	i=1;
+	while (i<m1) {
+		str[i]=""
+		j=1;
+		while (j<n1) {
+			str[i]+=" "+ A[i][j];
+			j++;
+		}
+		message += str[i]+"\r";
+		i++;
+	}
+}
+
+function getinput(form){ 
+	var z;
+	matrix=form.gamematrix.value;
+	for (i=0;i<matrix.length;i++) {
+		z=matrix.charCodeAt(i);
+		if ((z==13)||(z==10)) break;
+	}
+	if (z==13) {
+		mat = matrix.split("\r");
+	} else if (z==10) {
+		mat = matrix.split("\n");
+	}
+	m=mat.length;
+	while (mat[m-1].length==0) m--;
+	for (i=0;i<m;i++) {
+		mat[i]=mat[i].split(" ");
+	}
+}
+
+
+
+function CheckA() {
+	var i,j;
+	message1 = "The matrix is\n";
+	i=0;
+	while (i<=m1) {
+		str[i]=""
+		j=0;
+		while (j<=n1) {
+			str[i]+=" "+ A[i][j];
+			j++;
+		}
+		message1 += str[i]+"\r";
+		i++;
+	}
+	alert(message1)
+}
+
+function Solve_LP() {
+	var i,j,p,q,t1,d,epsilon;
+	epsilon=.000000000001
+	q=1;
+	while (q != 0) {
+		r=0;
+		for (i=1;i<m1;i++) {	/* Calculate to find pivot row */
+			t1=A[i][q];
+			if (t1>epsilon) {     /* To avoid roundoff error */
+				t2=A[i][n1];
+				if (t2<=0) {
+					p=i;
+					i=m1;
+				} else if (t1>t2*r) {
+					p=i;
+					r=t1/t2;
+				}
+			}
+		}
+		d=A[p][q];				/* Pivot on (p,q) */
+		j=1;
+		while (j<n2) {				/* Pivot row */
+		    if (j!=q) A[p][j]=A[p][j]/d;
+			j++;
+		}
+		i=1;
+		while (i<=m1) {			/* Pivot main part */
+		    if (i != p) {
+			    j=1;
+				while (j<=n1) {
+				    if (j != q) A[i][j]=A[i][j]-A[i][q]*A[p][j];
+				    j++;
+				}
+		    }
+			i++;
+		}
+		i=1;
+		while (i<=m1) {			/* Pivot col */
+		    if (i != p) A[i][q] = (0.-A[i][q])/d;
+			i++;
+		}
+		A[p][q]=1./d;
+		t1=A[p][0];
+		A[p][0]=A[0][q];
+		A[0][q]=t1;				/* End pivot */
+		q=0;
+		j=1;
+		while (j<n1) {			/* Find pivot col */
+		    if (A[m1][j]<0) {
+			    q=j;
+				j=n1;
+		    }
+			j++;
+		}
+	}
+}
+
+function ValueOptStr() {
+	x[0]=0;
+	val=1./A[m1][n1];
+	var j=1;
+	while (j<n1) {
+	    if (A[0][j] < 0) {
+ 	    	y[0-A[0][j]]=0
+	    } else {
+		    x[A[0][j]] = A[m1][j]*val;
+	    }
+		j++;
+	}
+	var i=1;
+	while (i<m1) {
+	    if (A[i][0] < 0) {
+	    	y[0-A[i][0]]= A[i][n1]*val;
+	    } else {
+		    x[A[i][0]] = 0;
+	    }
+		i++;
+	}
+}
+
+function makeValuePositive() {
+	var i,j;
+	vsave=1*A[1][1];    /* Change A to number */
+	j=2;
+	while (j<n1) {		/* Find min first row */
+		s=1*A[1][j];
+		if (vsave>s) {
+			vsave = s;
+		}
+		j++;
+	}
+	vsave=vsave-1;
+	i=1;
+	while (i<m1) {
+		j=1;
+		while (j<n1) {
+			A[i][j]=A[i][j]-vsave;
+			j++;
+		}
+		i++;
+	}
+}
+
+function display(form) {
+	var i,j,t,opt1,opt2
+	val=val+vsave;
+	var t=Math.round(100000*val)/100000;
+	message+= "The value of the game is "+t+".\r";
+	var t=Math.round(100000*x[1])/100000;
+	opt1= "An optimal strategy for Player I is:\r ("+t;
+	i=2;
+	while (i<=m) {
+		t=Math.round(100000*x[i])/100000;
+		opt1+= ","+t;
+		i++;
+	}
+	opt1+=")\r"; 
+	var t=Math.round(100000*y[1])/100000;
+	opt2="An optimal strategy for Player II is:\r ("+t;
+	j=2;
+	while (j<=n) {
+		t=Math.round(100000*y[j])/100000;
+		opt2+= ","+t;
+		j++;
+	}
+	opt2+=")\r"; 
+	message+=opt1+opt2; 
+	form.output.value=message; 
+}
+
+</script>
+</head>
+<BODY BGCOLOR="#FFFFFF" >
+
+<H1>Calculating the Solution of a Matrix Game</H1>
+<HR size=5>
+To solve for the matrix game, use general notation that includes payoff as used in the class.
+<br>Note: We've used a randomization method to avoid cycling. And because we're using convergence;
+ if there exists more than one optimal strategy, the program may return a random Optimal Strategy and the corresponding Game Value.
+
+<p>
+    <B>What to do:</B><br>
+    <ul>
+        <li>Enter the payoff matrix in the textarea below.
+        <li>Separate the numbers in each row by spaces. 
+        <li>Put each row on a new line.
+        <li>Click on "Solve".
+		<li>The solution will appear in the second text box.
+    </ul>
+    <hr size=5>
+    <CENTER>
+
+<FORM METHOD=POST name="form1">
+        <TEXTAREA NAME="gamematrix" ROWS=10 COLS=60></TEXTAREA>
+		<p>
+		<input type="button" value="Solve!" onClick="main(this.form)">
+		<p>
+        <TEXTAREA NAME="output" ROWS=10 COLS=60></TEXTAREA>
+</FORM>
+
+    </CENTER>
+
+</body>
+</html>
